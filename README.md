@@ -100,6 +100,6 @@ Below is a list of programs which I use often when writing my own init scripts:
 - execvp - set program display name, alter argv, fork-call execvp() from shell
 - swd - simple but useful when you want to `pwd` relative directory
 
-These tools can be found either in my experimental [R2](https://github.com/siblynx/r2) Linux, or in [lynxware](https://github.com/siblynx/lynxware) repository. They also simple enough to be in one source file. The only super itself is a big experimental program which aims to be a more powerful sudo replacement. It is located [here](http://lynxlynx.tk/prg/super/), and has it's own [repository](https://github.com/siblynx/super).
+These tools can be found either in my experimental [R2](https://github.com/siblynx/r2) Linux, or in [lynxware](https://github.com/siblynx/lynxware) repository. They also simple enough to be in one source file. The only super itself is a big experimental program which aims to be a more powerful sudo replacement. It is located [here](http://lynxlynx.ru/prg/super/), and has it's own [repository](https://github.com/siblynx/super).
 
 Lynx, Sep2015.
