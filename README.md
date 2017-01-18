@@ -88,18 +88,4 @@ Things that are not going to be supported:
 
 In fact, this is already finished init program which can be used everywhere. I don't plan any further changes.
 
-## See also
-
-Building Linux from ground was (and partially is) my hobby. From the experience in this area I can tell that small and efficient init is not sufficient, especially when you need to alter certain program properties such as privileges (with free setXid/groups control), arguments or environment.
-
-Below is a list of programs which I use often when writing my own init scripts:
-
-- fork - process daemonizer (force programs to background)
-- setugid or super - universal privilege separator tool (force programs to be under certain
-- uid/gid/groups, free group control, set environment, set current directory, chroot, set resource limits and priority)
-- execvp - set program display name, alter argv, fork-call execvp() from shell
-- swd - simple but useful when you want to `pwd` relative directory
-
-These tools can be found either in my experimental [R2](https://github.com/siblynx/r2) Linux, or in [lynxware](https://github.com/siblynx/lynxware) repository. They also simple enough to be in one source file. The only super itself is a big experimental program which aims to be a more powerful sudo replacement. It is located [here](http://lynxlynx.ru/prg/super/), and has it's own [repository](https://github.com/siblynx/super).
-
-Lynx, Sep2015.
+Lynx, Jan2017.
