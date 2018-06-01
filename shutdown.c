@@ -2,6 +2,7 @@
  * This code is in public domain
  */
 
+#define _XOPEN_SOURCE 700
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -26,14 +27,25 @@ static int usage(void)
 
 int main(int argc, char **argv)
 {
+	char *progname;
 	int c, r, h, p, S;
 	int t;
 
+	progname = basename(*argv);
 	t = r = h = p = S = 0;
 
-	if (!strcmp(basename(*argv), "reboot")) { kill(1, SIGALRM); return 0; }
-	if (!strcmp(basename(*argv), "halt")) { kill(1, SIGABRT); return 0; }
-	if (!strcmp(basename(*argv), "poweroff")) { kill(1, SIGQUIT); return 0; }
+	if (!strcmp(progname, "reboot")) {
+		kill(1, SIGALRM);
+		return 0;
+	}
+	else if (!strcmp(progname, "halt")) {
+		kill(1, SIGABRT);
+		return 0;
+	}
+	else if (!strcmp(progname, "poweroff")) {
+		kill(1, SIGQUIT);
+		return 0;
+	}
 
 	while ((c = getopt(argc, argv, "rhpcCSt:")) != -1) {
 		switch (c) {

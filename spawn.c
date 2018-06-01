@@ -2,6 +2,7 @@
  * This code is in public domain
  */
 
+#define _BSD_SOURCE
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
@@ -30,7 +31,9 @@ int main(int argc, char **argv)
 	sigset_t set;
 	pid_t x, y;
 	int f;
-	int c; char *tty = "/dev/console"; int t = 0, T = -1;
+	int c;
+	char *tty = "/dev/console";
+	int t = 0, T = -1;
 
 	opterr = 0;
 	while ((c = getopt(argc, argv, "c:t:T:")) != -1) {

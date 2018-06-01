@@ -18,24 +18,24 @@ static void sighandl(int sig)
 
 	switch (sig) {
 		case SIGINT:
-		execv("/etc/init/cad", (char *[]){"cad", NULL});
+		execl("/etc/init/cad", "cad", (char *)NULL);
 		break;
 
 		case SIGALRM:
-		execv("/etc/init/reboot", (char *[]){"reboot", NULL});
+		execl("/etc/init/reboot", "reboot", (char *)NULL);
 		break;
 
 		case SIGQUIT:
-		execv("/etc/init/poweroff", (char *[]){"poweroff", NULL});
+		execl("/etc/init/poweroff", "poweroff", (char *)NULL);
 		break;
 
 		case SIGABRT:
-		execv("/etc/init/shutdown", (char *[]){"shutdown", NULL});
+		execl("/etc/init/shutdown", "shutdown", (char *)NULL);
 		break;
 
 #ifdef SIGPWR
 		case SIGPWR:
-		execv("/etc/init/pwrfail", (char *[]){"pwrfail", NULL});
+		execl("/etc/init/pwrfail", "pwrfail", (char *)NULL);
 		break;
 #endif
 	}
@@ -49,7 +49,7 @@ int main(void)
 	if (getpid() != 1) return 1;
 
 	if (!access("/etc/init/altinit", X_OK) && !getenv("_INIT"))
-		execv("/etc/init/altinit", (char *[]){"init", NULL});
+		execl("/etc/init/altinit", "init", (char *)NULL);
 
 	reboot(RB_DISABLE_CAD);
 
@@ -81,5 +81,5 @@ int main(void)
 
 	setsid();
 	setpgid(0, 0);
-	return execv("/etc/init/boot", (char *[]){"boot", NULL});
+	return execl("/etc/init/boot", "boot", (char *)NULL);
 }
