@@ -1,20 +1,22 @@
 override CFLAGS+=-std=c89 -Wall -O2
 
-all: init shutdown spawn
+all: init shutdown respawn
 init: init.c
 shutdown: shutdown.c
-spawn: spawn.c
+respawn: respawn.c
 
 clean:
-	rm -f init shutdown spawn
+	rm -f init shutdown respawn
 
 install:
-	install -m 755 init $(DESTDIR)/sbin
-	install -m 755 shutdown $(DESTDIR)/sbin
-	install -m 755 spawn $(DESTDIR)/sbin
+	install -m 0755 init $(DESTDIR)/sbin/
+	install -m 0755 shutdown $(DESTDIR)/sbin/
+	install -m 0755 respawn $(DESTDIR)/sbin/
 	rm -f $(DESTDIR)/sbin/reboot
 	ln -s shutdown $(DESTDIR)/sbin/reboot
 	rm -f $(DESTDIR)/sbin/halt
 	ln -s shutdown $(DESTDIR)/sbin/halt
 	rm -f $(DESTDIR)/sbin/poweroff
 	ln -s shutdown $(DESTDIR)/sbin/poweroff
+	rm -f $(DESTDIR)/bin/respawn
+	ln -s ../sbin/respawn $(DESTDIR)/bin/respawn

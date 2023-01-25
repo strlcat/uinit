@@ -64,12 +64,12 @@ The system will not be halted immediately, but init will run the scripts to do s
 Unprivileged user usually can't send signals to pid 1, or directly control system shutdown. The errors are ignored then,
 /sbin/shutdown does not report them.
 
-/sbin/spawn is a little supervising program. The program to be spawned is given in it's command line (including arguments).
-Then spawn runs it as it's child, watches it's state and respawns it if it exited. Spawn must be killed to stop respawning
+/sbin/respawn is a little supervising program. The program to be spawned is given in it's command line (including arguments).
+Then respawn runs it as it's child, watches it's state and respawns it if it exited. Respawn must be killed to stop respawning
 the program, or countdown must be specified. It supports specifying respawn counts, delay between respawns and controlling
 tty the child will have, which must already exist. This tty is opened then, asigned as standard three Unix IO streams.
 
-'-c' specifies path to tty, '-t' specifies time between respawns in milliseconds, '-T' specifies maximum count of respawns.
+'-T' specifies path to tty, '-t' specifies time between respawns, '-n' specifies maximum count of respawns.
 
 LIMITATIONS
 
@@ -87,4 +87,4 @@ Things that are not going to be supported:
 
 In fact, this is already finished init program which can be used everywhere. I don't plan any further changes.
 
-Lynx, Aug2017.
+Lynx, Jan2023.
