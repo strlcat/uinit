@@ -14,9 +14,9 @@
 #define _UINIT_PATH "/etc/init"
 #endif
 
-typedef void (*sighandler_t)(int);
+typedef void (*signal_handlerer_t)(int);
 
-static void sighandl(int sig)
+static void signal_handler(int sig)
 {
 	if (fork()) return;
 
@@ -70,12 +70,12 @@ int main(void)
 		sigdelset(&set, SIGPWR);
 #endif
 		sigprocmask(SIG_BLOCK, &set, NULL);
-		signal(SIGINT, sighandl);
-		signal(SIGALRM, sighandl);
-		signal(SIGQUIT, sighandl);
-		signal(SIGABRT, sighandl);
+		signal(SIGINT, signal_handler);
+		signal(SIGALRM, signal_handler);
+		signal(SIGQUIT, signal_handler);
+		signal(SIGABRT, signal_handler);
 #ifdef SIGPWR
-		signal(SIGPWR, sighandl);
+		signal(SIGPWR, signal_handler);
 #endif
 
 		for (;;) wait(&status);
