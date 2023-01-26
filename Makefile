@@ -1,4 +1,5 @@
-override CFLAGS+=-std=c89 -Wall -O2
+UINITPATH=/etc/init
+override CFLAGS+=-std=c89 -Wall -O2 -D_UINIT_PATH=\"$(UINITPATH)\"
 
 all: init shutdown respawn
 init: init.c

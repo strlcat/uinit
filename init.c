@@ -10,6 +10,10 @@
 #include <sys/wait.h>
 #include <sys/reboot.h>
 
+#ifndef _UINIT_PATH
+#define _UINIT_PATH "/etc/init"
+#endif
+
 typedef void (*sighandler_t)(int);
 
 static void sighandl(int sig)
@@ -18,24 +22,24 @@ static void sighandl(int sig)
 
 	switch (sig) {
 		case SIGINT:
-		execl("/etc/init/cad", "cad", (char *)NULL);
+		execl(_UINIT_PATH "/cad", "cad", (char *)NULL);
 		break;
 
 		case SIGALRM:
-		execl("/etc/init/reboot", "reboot", (char *)NULL);
+		execl(_UINIT_PATH "/reboot", "reboot", (char *)NULL);
 		break;
 
 		case SIGQUIT:
-		execl("/etc/init/poweroff", "poweroff", (char *)NULL);
+		execl(_UINIT_PATH "/poweroff", "poweroff", (char *)NULL);
 		break;
 
 		case SIGABRT:
-		execl("/etc/init/shutdown", "shutdown", (char *)NULL);
+		execl(_UINIT_PATH "/shutdown", "shutdown", (char *)NULL);
 		break;
 
 #ifdef SIGPWR
 		case SIGPWR:
-		execl("/etc/init/pwrfail", "pwrfail", (char *)NULL);
+		execl(_UINIT_PATH "/pwrfail", "pwrfail", (char *)NULL);
 		break;
 #endif
 	}
@@ -48,8 +52,8 @@ int main(void)
 
 	if (getpid() != 1) return 1;
 
-	if (!access("/etc/init/altinit", X_OK) && !getenv("_INIT"))
-		execl("/etc/init/altinit", "init", (char *)NULL);
+	if (!access(_UINIT_PATH "/altinit", X_OK) && !getenv("_INIT"))
+		execl(_UINIT_PATH "/altinit", "init", (char *)NULL);
 
 	reboot(RB_DISABLE_CAD);
 
@@ -81,5 +85,5 @@ int main(void)
 
 	setsid();
 	setpgid(0, 0);
-	return execl("/etc/init/boot", "boot", (char *)NULL);
+	return execl(_UINIT_PATH "/boot", "boot", (char *)NULL);
 }
