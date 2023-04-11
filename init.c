@@ -14,7 +14,7 @@
 #define _UINIT_PATH "/etc/init"
 #endif
 
-typedef void (*signal_handlerer_t)(int);
+typedef void (*sighandler_t)(int);
 
 static void signal_handler(int sig)
 {
