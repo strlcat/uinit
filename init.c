@@ -2,58 +2,182 @@
  * This code is in public domain
  */
 
-#define _XOPEN_SOURCE 700
+#include "sdefs.h"
+
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/types.h>
+#include <libgen.h>
 #include <sys/wait.h>
 #include <sys/reboot.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <errno.h>
+#include "xstrlcpy.c"
+#ifndef _UINIT_SOCKNAME
+#define _UINIT_SOCKNAME "/dev/initctl"
+#endif
 
-#ifndef _UINIT_PATH
-#define _UINIT_PATH "/etc/init"
+#ifndef _UINIT_BASEPATH
+#define _UINIT_BASEPATH "/etc/init"
 #endif
 
 typedef void (*sighandler_t)(int);
 
+static int create_ctrl_socket(const char *path)
+{
+	int rfd, x;
+	struct sockaddr_un sun;
+	socklen_t sunl;
+
+	memset(&sun, 0, sizeof(struct sockaddr_un));
+	sun.sun_family = AF_UNIX;
+	if (path[0] != '@') unlink(path);
+	xstrlcpy(sun.sun_path, path, sizeof(sun.sun_path));
+	if (path[0] == '@') {
+		sun.sun_path[0] = '\0';
+		sunl = sizeof(sun.sun_family) + strlen(path);
+	}
+	else sunl = sizeof(struct sockaddr_un);
+	rfd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (rfd != -1) {
+		x = fcntl(rfd, F_GETFD, 0);
+		if (x == -1) goto _mfdf;
+		if (fcntl(rfd, F_SETFD, x | FD_CLOEXEC) == -1) goto _mfdf;
+		x = fcntl(rfd, F_GETFL, 0);
+		if (x == -1) goto _mfdf;
+		if (fcntl(rfd, F_SETFL, x | O_ASYNC) == -1) goto _mfdf;
+		if (fcntl(rfd, F_SETOWN, 1) == -1) goto _mfdf;
+		if (fcntl(rfd, F_SETSIG, SIGIO) == -1) goto _mfdf;
+		if (fchown(rfd, 0, 0) == -1) goto _mfdf;
+		if (fchmod(rfd, 0600) == -1) goto _mfdf;
+		umask(0077);
+		if (bind(rfd, (struct sockaddr *)&sun, sunl) == -1) goto _mfdf;
+		if (listen(rfd, 256) == -1) goto _mfdf;
+		umask(0022);
+		if (fchown(rfd, 0, 0) == -1) goto _mfdf;
+		if (fchmod(rfd, 0600) == -1) goto _mfdf;
+	}
+	else {
+_mfdf:		if (rfd != -1) close(rfd);
+		rfd = -1;
+	}
+
+	return rfd;
+}
+
+static int goingdown;
+static int ctlfd = -1;
+
 static void signal_handler(int sig)
 {
-	if (fork()) return;
+	int clfd, cmd;
+	size_t sz;
+	sigset_t set;
 
-	switch (sig) {
-		case SIGINT:
-		execl(_UINIT_PATH "/cad", "cad", (char *)NULL);
+	cmd = UINIT_CMD_INVALID;
+
+	if (sig == SIGIO) {
+		struct ucred cr;
+		socklen_t crl;
+
+		if (ctlfd == -1) return;
+
+		clfd = accept(ctlfd, NULL, 0);
+		if (clfd != -1) {
+			cr.uid = NOUID;
+			cr.gid = NOGID;
+			cr.pid = 1;
+			crl = sizeof(struct ucred);
+			if (getsockopt(clfd, SOL_SOCKET, SO_PEERCRED, &cr, &crl) == -1) {
+				cmd = UINIT_CMD_INVALID;
+			}
+			else {
+				if (cr.uid == 0 && cr.gid == 0 && cr.pid > 1) {
+					sz = (size_t)read(clfd, &cmd, sizeof(int));
+					if (sz == NOSIZE) cmd = UINIT_CMD_INVALID;
+					if (sz < sizeof(int)) cmd = UINIT_CMD_INVALID;
+				}
+			}
+			close(clfd);
+		}
+	}
+	else if (sig == SIGALRM) {
+		if (ctlfd != -1) return;
+		ctlfd = create_ctrl_socket(_UINIT_SOCKNAME);
+		return;
+	}
+	else if (sig == SIGINT) {
+		cmd = UINIT_CMD_CAD;
+	}
+
+	if (cmd == UINIT_CMD_INVALID) return;
+
+	if (goingdown) return;
+
+	if (fork()) {
+		if (cmd != UINIT_CMD_POWERFAIL) {
+			sigfillset(&set);
+			sigprocmask(SIG_BLOCK, &set, NULL);
+			goingdown = 1;
+			if (ctlfd != -1) {
+				shutdown(ctlfd, SHUT_RDWR);
+				close(ctlfd);
+			}
+		}
+		return;
+	}
+
+	switch (cmd) {
+		case UINIT_CMD_CAD:
+		execl(_UINIT_BASEPATH "/cad", "cad", (char *)NULL);
 		break;
 
-		case SIGALRM:
-		execl(_UINIT_PATH "/reboot", "reboot", (char *)NULL);
+		case UINIT_CMD_REBOOT:
+		execl(_UINIT_BASEPATH "/reboot", "reboot", (char *)NULL);
 		break;
 
-		case SIGQUIT:
-		execl(_UINIT_PATH "/poweroff", "poweroff", (char *)NULL);
+		case UINIT_CMD_POWEROFF:
+		execl(_UINIT_BASEPATH "/poweroff", "poweroff", (char *)NULL);
 		break;
 
-		case SIGABRT:
-		execl(_UINIT_PATH "/shutdown", "shutdown", (char *)NULL);
+		case UINIT_CMD_SHUTDOWN:
+		execl(_UINIT_BASEPATH "/shutdown", "shutdown", (char *)NULL);
 		break;
 
-#ifdef SIGPWR
-		case SIGPWR:
-		execl(_UINIT_PATH "/pwrfail", "pwrfail", (char *)NULL);
+		case UINIT_CMD_POWERFAIL:
+		execl(_UINIT_BASEPATH "/powerfail", "powerfail", (char *)NULL);
 		break;
-#endif
 	}
 }
 
-int main(void)
+static char *progname;
+
+int main(int argc, char **argv)
 {
 	sigset_t set;
-	int status;
+	int x;
+
+	umask(0022);
+	progname = basename(argv[0]);
+
+	if (!strcmp(progname, "mkinitctl")) {
+		kill(1, SIGALRM);
+		return 0;
+	}
+
+	if (!strcmp(progname, "telinit")) {
+		return 0;
+	}
 
 	if (getpid() != 1) return 1;
 
-	if (!access(_UINIT_PATH "/altinit", X_OK) && !getenv("_INIT"))
-		execl(_UINIT_PATH "/altinit", "init", (char *)NULL);
+	if (!access(_UINIT_BASEPATH "/altinit", X_OK) && !getenv("_INIT"))
+		execl(_UINIT_BASEPATH "/altinit", "init", (char *)NULL);
 
 	reboot(RB_DISABLE_CAD);
 
@@ -62,28 +186,27 @@ int main(void)
 
 	if (fork()) {
 		sigprocmask(SIG_UNBLOCK, &set, NULL);
-		sigdelset(&set, SIGINT);
 		sigdelset(&set, SIGALRM);
-		sigdelset(&set, SIGQUIT);
-		sigdelset(&set, SIGABRT);
-#ifdef SIGPWR
-		sigdelset(&set, SIGPWR);
-#endif
+		sigdelset(&set, SIGINT);
+		sigdelset(&set, SIGIO);
+		sigdelset(&set, SIGCHLD);
 		sigprocmask(SIG_BLOCK, &set, NULL);
-		signal(SIGINT, signal_handler);
 		signal(SIGALRM, signal_handler);
-		signal(SIGQUIT, signal_handler);
-		signal(SIGABRT, signal_handler);
-#ifdef SIGPWR
-		signal(SIGPWR, signal_handler);
-#endif
+		signal(SIGINT, signal_handler);
+		signal(SIGIO, signal_handler);
+		signal(SIGCHLD, SIG_DFL);
+		if (_UINIT_SOCKNAME[0] != '@') alarm(10);
 
-		for (;;) wait(&status);
+		while (1) {
+			if (wait(&x) == -1 && errno == ECHILD) {
+				pause();
+			}
+		}
 	}
 
 	sigprocmask(SIG_UNBLOCK, &set, NULL);
 
 	setsid();
 	setpgid(0, 0);
-	return execl(_UINIT_PATH "/boot", "boot", (char *)NULL);
+	return execl(_UINIT_BASEPATH "/boot", "boot", (char *)NULL);
 }

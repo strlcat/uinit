@@ -2,7 +2,8 @@
  * This code is in public domain
  */
 
-#define _BSD_SOURCE
+#include "sdefs.h"
+
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
