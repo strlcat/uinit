@@ -36,7 +36,7 @@ value:
 
 Internally uinit is controlled by sending commands to it's control socket, default is /dev/initctl.
 This socket must be created manually in your /etc/init/boot somewhere between initializing /dev
-devtmpfs filesystem (for example, after udev startup) but before going multiuser.
+devtmpfs filesystem (for example, after udev startup) but before going multiuser, by calling /sbin/mkinitctl.
 See source for details. init sets socket mode so nobody other than superuser can send commands to it.
 It also checks permissions at runtime even if someone successfully connects to it.
 
@@ -70,6 +70,15 @@ continuing to run as usual. powerfail script can then initiate full system shutd
 
 Unprivileged user usually can't send control socket commands, or directly control system shutdown.
 The errors are ignored then, /sbin/shutdown does not report them. This is normal.
+
+/sbin/mkinitctl tells init to create it's control socket, /dev/initctl. You shall call it after /dev
+is properly initialized. init also will try to create this socket after 10 seconds since it was run,
+and if it will fail, nothing bad will happen. You always can manually call /sbin/mkinitctl later.
+Beware that system running without init control socket can be very easily halted without a notice!
+
+/sbin/telinit does nothing. This is provided for minimal SysV compatibility for Slackware.
+
+Calling /sbin/shutdown with '-w', as well as it's aliases is also noop, for same reason.
 
 /sbin/respawn is a little supervising program. The program to be spawned is given in it's command line (including arguments).
 Then respawn runs it as it's child, watches it's state and respawns it if it exited. Respawn must be killed to stop respawning
