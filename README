@@ -1,4 +1,4 @@
-uinit - smallest init possible.
+uinit - well, almost smallest SysV compatible init possible.
 
 HOW IT WORKS
 
@@ -18,9 +18,10 @@ scripts are needed (but they can be a hard/symlink to a more general script):
 /etc/init/shutdown - gets executed when system will be halted
 /etc/init/cad - gets executed when user typed Ctrl-Alt-Delete on system
 console
-/etc/init/pwrfail - gets executed when init receives SIGPWR. System
+/etc/init/powerfail - gets executed when init receives SIGPWR. System
 administrator can install a UPS monitoring service which then, on power
-failure, will send SIGPWR to any process in system.
+failure, will send SIGPWR to any process in system. Someone have to catch
+this on, and call /sbin/powerfail properly to tell init it've got power problem.
 
 /etc/init/altinit - this is preinit script. It is usually not needed (and can be safely omitted),
 but can be used as a fallback when you have no chance to specify init=
@@ -33,8 +34,11 @@ value:
 	# ... Do your preinit stuff there ...
 	_INIT=1 exec /sbin/init
 
-Internally uinit is controlled by sending signals to pid 1. See source for details. The user with sufficient privileges
-can send signals to init and it will respect them too.
+Internally uinit is controlled by sending commands to it's control socket, default is /dev/initctl.
+This socket must be created manually in your /etc/init/boot somewhere between initializing /dev
+devtmpfs filesystem (for example, after udev startup) but before going multiuser.
+See source for details. init sets socket mode so nobody other than superuser can send commands to it.
+It also checks permissions at runtime even if someone successfully connects to it.
 
 WHY
 
@@ -52,17 +56,20 @@ But if you do, it will just exit if it's not a pid 1, it's safe to do so. It doe
 /sbin/shutdown is called when system needs to be turned off. When called as 'shutdown', the program will, according
 to command line, bring the system down IMMEDIATELY. Without arguments it will just show a help.
 
-Calling `/sbin/shutdown -h` will halt your system. It will not show the help screen :-)
+Calling `/sbin/shutdown -H` will halt your system. It will not show the help screen :-)
 
-'-h' will halt, '-p' will power down if possible, '-r' will reboot the system.
-'-c' will tell Linux kernel to send SIGINT to init when user types C-a-d in system console. '-C' cancels that, and
-returns Linux kernel to default: quick reboot on C-a-d.
+'-H' will halt, '-P' will power down if possible, '-R' will reboot the system.
 
-When called as 'reboot', 'poweroff', or 'halt' (process name), the program will instead send needed signals to init.
-The system will not be halted immediately, but init will run the scripts to do so.
+When called as 'reboot', 'poweroff', or 'halt' (process name), the program will instead send commands to running init.
+If connecting to control socket fails, these commands will initiate immediate system shutdown.
+But if connection is successful and command is understood, then system will not be halted immediately,
+but init will run the scripts to do so. init assumes that all shutdown-like sequences are final, and so,
+there is no currently way to cancel an initiated shutdown. init will simply disable control socket, and proceed like
+shutdown is inevitable. The only exception is powerfail condition: init just will run a powerfail script, while
+continuing to run as usual. powerfail script can then initiate full system shutdown afterwards.
 
-Unprivileged user usually can't send signals to pid 1, or directly control system shutdown. The errors are ignored then,
-/sbin/shutdown does not report them.
+Unprivileged user usually can't send control socket commands, or directly control system shutdown.
+The errors are ignored then, /sbin/shutdown does not report them. This is normal.
 
 /sbin/respawn is a little supervising program. The program to be spawned is given in it's command line (including arguments).
 Then respawn runs it as it's child, watches it's state and respawns it if it exited. Respawn must be killed to stop respawning
@@ -81,10 +88,9 @@ Things that are not going to be supported:
 - Suck in any parts from userspace
 - Sending signals, watching processes other than reaping orphans
 - Configuration file(s)
-- Listening to commands via pipe
-- Exporting it's own control api via any mechanism
+- Exporting it's own control api via any mechanism (other than opaque one via control socket which might change in future)
 - Other features which you can see in various init systems I'm unaware of.
 
 In fact, this is already finished init program which can be used everywhere. I don't plan any further changes.
 
-Lynx, Jan2023.
+Rys, Apr2023.
