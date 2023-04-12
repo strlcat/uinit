@@ -157,10 +157,28 @@ static void signal_handler(int sig)
 
 static char *progname;
 
+static int reopen_console(const char *path)
+{
+	int fd;
+
+	if ((fd = open(path ? path : "/dev/console", O_RDWR | O_NONBLOCK | O_NOCTTY)) != -1) {
+		close(0);
+		if (dup2(fd, 0) == -1) return fd;
+		close(1);
+		if (dup2(fd, 1) == -1) return fd;
+		close(2);
+		if (dup2(fd, 2) == -1) return fd;
+		if (fd > 2) close(fd);
+		return 5;
+	}
+	return -1;
+}
+
 int main(int argc, char **argv)
 {
 	sigset_t set;
 	int x;
+	char *s;
 
 	umask(0022);
 	progname = basename(argv[0]);
@@ -178,6 +196,13 @@ int main(int argc, char **argv)
 
 	if (!access(_UINIT_BASEPATH "/altinit", X_OK) && !getenv("_INIT"))
 		execl(_UINIT_BASEPATH "/altinit", "init", (char *)NULL);
+
+	s = getenv("CONSOLE");
+	x = reopen_console(s ? s : "/dev/console");
+	if (x != 5) {
+		if (x != -1) write(x, "Unable to open initial console", (sizeof("Unable to open initial console")-1));
+		pause();
+	}
 
 	reboot(RB_DISABLE_CAD);
 
