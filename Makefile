@@ -1,5 +1,6 @@
 UINITPATH=/etc/init
-override CFLAGS+=-std=c89 -Wall -O2 -D_UINIT_PATH=\"$(UINITPATH)\"
+UINITSOCK=/dev/initctl
+override CFLAGS+=-std=c89 -Wall -O2 -D_UINIT_BASEPATH=\"$(UINITPATH)\" -D_UINIT_SOCKNAME=\"$(UINITSOCK)\"
 
 all: init shutdown respawn
 init: init.c
@@ -19,5 +20,9 @@ install:
 	ln -s shutdown $(DESTDIR)/sbin/halt
 	rm -f $(DESTDIR)/sbin/poweroff
 	ln -s shutdown $(DESTDIR)/sbin/poweroff
+	rm -f $(DESTDIR)/sbin/telinit
+	ln -s init $(DESTDIR)/sbin/telinit
+	rm -f $(DESTDIR)/sbin/mkinitctl
+	ln -s init $(DESTDIR)/sbin/mkinitctl
 	rm -f $(DESTDIR)/bin/respawn
 	ln -s ../sbin/respawn $(DESTDIR)/bin/respawn
