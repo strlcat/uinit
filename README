@@ -60,7 +60,7 @@ Calling `/sbin/shutdown -H` will halt your system. It will not show the help scr
 
 '-H' will halt, '-P' will power down if possible, '-R' will reboot the system.
 
-When called as 'reboot', 'poweroff', or 'halt' (process name), the program will instead send commands to running init.
+When called as 'reboot', 'poweroff', 'powerfail' or 'halt' (process name), the program will instead send commands to running init.
 If connecting to control socket fails, these commands will initiate immediate system shutdown.
 But if connection is successful and command is understood, then system will not be halted immediately,
 but init will run the scripts to do so. init assumes that all shutdown-like sequences are final, and so,
@@ -86,6 +86,9 @@ the program, or countdown must be specified. It supports specifying respawn coun
 tty the child will have, which must already exist. This tty is opened then, asigned as standard three Unix IO streams.
 
 '-T' specifies path to tty, '-t' specifies time between respawns, '-n' specifies maximum count of respawns.
+
+A sample set of bring-up SysV compatible scripts is provided for your own amusement in `initrc.tar.gz` file there.
+They shall give you idea about what's going on. These scripts are drop-in compatible with Slackware 15.x distro.
 
 LIMITATIONS
 
