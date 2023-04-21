@@ -87,8 +87,9 @@ tty the child will have, which must already exist. This tty is opened then, asig
 
 '-T' specifies path to tty, '-t' specifies time between respawns, '-n' specifies maximum count of respawns.
 
-A sample set of bring-up SysV compatible scripts is provided for your own amusement in `initrc.tar.gz` file there.
-They shall give you idea about what's going on. These scripts are drop-in compatible with Slackware 15.x distro.
+A sample set of bootstrap scripts is provided for your own amusement in `initrc.tar.gz` file there.
+They shall give you idea about what's going on. These scripts are designed to boot stock SysV-scripts
+that are shipped with Slackware 15.x distro. These bootstrap scripts ARE NOT REPLACEMENT for your existing ones!
 
 LIMITATIONS
 
