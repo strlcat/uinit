@@ -28,6 +28,56 @@
 
 typedef void (*sighandler_t)(int);
 
+static void strtoi(char *s, unsigned x)
+{
+	size_t y = 0, z;
+	char t[12];
+
+	memset(s, 0, sizeof(t));
+	if (x == 0) {
+		s[0] = '0';
+		return;
+	}
+	while (x) {
+		t[y] = (x % 10) + '0'; y++;
+		x /= 10;
+	}
+	z = 0;
+	while (y) {
+		s[z] = t[y-1];
+		z++; y--;
+	}
+}
+
+static unsigned atoui(const char *s)
+{
+	const char *p = s;
+	unsigned x;
+	size_t z;
+
+	x = 0; z = 1;
+	while (*s) s++;
+	s--;
+	while (s-p >= 0) {
+		if (*s >= '0' && *s <= '9') {
+			x += (*s - '0') * z;
+			s--; z *= 10;
+		}
+		else return 0;
+	}
+
+	return x;
+}
+
+static int setfd_cloexec(int fd)
+{
+	int x;
+
+	x = fcntl(fd, F_GETFL, 0);
+	if (x == -1) return -1;
+	return fcntl(fd, F_SETFD, x | FD_CLOEXEC);
+}
+
 static int create_ctrl_socket(const char *path)
 {
 	int rfd, x;
@@ -45,9 +95,6 @@ static int create_ctrl_socket(const char *path)
 	else sunl = sizeof(struct sockaddr_un);
 	rfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (rfd != -1) {
-		x = fcntl(rfd, F_GETFD, 0);
-		if (x == -1) goto _mfdf;
-		if (fcntl(rfd, F_SETFD, x | FD_CLOEXEC) == -1) goto _mfdf;
 		x = fcntl(rfd, F_GETFL, 0);
 		if (x == -1) goto _mfdf;
 		if (fcntl(rfd, F_SETFL, x | O_ASYNC) == -1) goto _mfdf;
@@ -114,10 +161,24 @@ static void signal_handler(int sig)
 	else if (sig == SIGINT) {
 		cmd = UINIT_CMD_CAD;
 	}
+	else if (sig == SIGHUP) {
+		cmd = UINIT_CMD_SINGLEUSER;
+		goto _su;
+	}
 
 	if (cmd == UINIT_CMD_INVALID) return;
 
 	if (goingdown) return;
+
+	if (cmd == UINIT_CMD_SINGLEUSER) {
+_su:		if (ctlfd != -1) {
+			char t[12];
+			strtoi(t, ctlfd);
+			setenv("UINIT_SOCKFD", t, 1);
+		}
+		execl(_UINIT_BASEPATH "/single", "single", (char *)NULL);
+		return;
+	}
 
 	if (fork()) {
 		if (cmd != UINIT_CMD_POWERFAIL) {
@@ -131,6 +192,8 @@ static void signal_handler(int sig)
 		}
 		return;
 	}
+
+	if (ctlfd != -1) setfd_cloexec(ctlfd);
 
 	switch (cmd) {
 		case UINIT_CMD_CAD:
@@ -204,6 +267,15 @@ int main(int argc, char **argv)
 		pause();
 	}
 
+	s = getenv("UINIT_SOCKFD");
+	if (s) {
+		ctlfd = atoui(s);
+		unsetenv("UINIT_SOCKFD");
+		/* we don't need alien fds from the past, recreate our own */
+		close(ctlfd);
+		ctlfd = -1;
+	}
+
 	reboot(RB_DISABLE_CAD);
 
 	sigfillset(&set);
@@ -228,6 +300,8 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+
+	if (ctlfd != -1) setfd_cloexec(ctlfd);
 
 	sigprocmask(SIG_UNBLOCK, &set, NULL);
 

@@ -18,6 +18,7 @@ scripts are needed (but they can be a hard/symlink to a more general script):
 /etc/init/shutdown - gets executed when system will be halted
 /etc/init/cad - gets executed when user typed Ctrl-Alt-Delete on system
 console
+/etc/init/single - gets executed when init goes into singleuser mode
 /etc/init/powerfail - gets executed when init receives SIGPWR. System
 administrator can install a UPS monitoring service which then, on power
 failure, will send SIGPWR to any process in system. Someone have to catch
@@ -60,8 +61,9 @@ Calling `/sbin/shutdown -H` will halt your system. It will not show the help scr
 
 '-H' will halt, '-P' will power down if possible, '-R' will reboot the system.
 
-When called as 'reboot', 'poweroff', 'powerfail' or 'halt' (process name), the program will instead send commands to running init.
-If connecting to control socket fails, these commands will initiate immediate system shutdown.
+When called as 'reboot', 'poweroff', 'powerfail', 'halt' or 'singleuser' (process name),
+the program will instead send commands to running init.
+If connecting to control socket fails, some of these commands will initiate immediate system shutdown.
 But if connection is successful and command is understood, then system will not be halted immediately,
 but init will run the scripts to do so. init assumes that all shutdown-like sequences are final, and so,
 there is no currently way to cancel an initiated shutdown. init will simply disable control socket, and proceed like
@@ -87,6 +89,10 @@ tty the child will have, which must already exist. This tty is opened then, asig
 
 '-T' specifies path to tty, '-t' specifies time between respawns, '-n' specifies maximum count of respawns.
 
+Singleuser mode is recommended to be implemented as a normal shutdown sequence, but instead of calling
+an appropriate shutdown command, spawn a /bin/sh instead at the very system console. This is how I understand
+a true singleuser mode: a complete system cleanup followed by spawning a shell at the system console.
+
 A sample set of bootstrap scripts is provided for your own amusement in `initrc.tar.gz` file there.
 They shall give you idea about what's going on. These scripts are designed to boot stock SysV-scripts
 that are shipped with Slackware 15.x distro. These bootstrap scripts ARE NOT REPLACEMENT for your existing ones!
@@ -97,7 +103,6 @@ Of course if you want full-blown runtime features other than fundamental system 
 
 Things that are not going to be supported:
 - Runlevels
-- Single user mode (as part of runlevels)
 - Suck in any parts from userspace
 - Sending signals, watching processes other than reaping orphans
 - Configuration file(s)
@@ -106,4 +111,4 @@ Things that are not going to be supported:
 
 In fact, this is already finished init program which can be used everywhere. I don't plan any further changes.
 
-Rys, Apr2023.
+Rys, Aug2023.

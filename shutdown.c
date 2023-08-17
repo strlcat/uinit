@@ -27,6 +27,7 @@ static int usage(void)
 	puts("usage: halt [-Sw]");
 	puts("usage: poweroff [-Sw]");
 	puts("usage: powerfail [-Sw]");
+	puts("usage: singleuser [-Sw]");
 	puts("usage: shutdown [-RHPSw]");
 	puts("  -R: reboot system immediately");
 	puts("  -H: halt system immediately");
@@ -106,6 +107,14 @@ _ckp:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_POWEROFF);
 	else if (!strcmp(progname, "powerfail")) {
 _ckf:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_POWERFAIL);
 		if (t == -1) goto _ckf;
+		if (t == 0) {
+			if (!(actf & ACT_NOSYNC)) sync();
+		}
+		return 0;
+	}
+	else if (!strcmp(progname, "singleuser")) {
+_cks:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_SINGLEUSER);
+		if (t == -1) goto _cks;
 		if (t == 0) {
 			if (!(actf & ACT_NOSYNC)) sync();
 		}
