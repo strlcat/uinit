@@ -176,6 +176,8 @@ _su:		if (ctlfd != -1) {
 			strtoi(t, ctlfd);
 			setenv("UINIT_SOCKFD", t, 1);
 		}
+		sigfillset(&set);
+		sigprocmask(SIG_UNBLOCK, &set, NULL);
 		execl(_UINIT_BASEPATH "/single", "single", (char *)NULL);
 		return;
 	}
