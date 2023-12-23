@@ -120,6 +120,12 @@ _mfdf:		if (rfd != -1) close(rfd);
 static int goingdown;
 static int ctlfd = -1;
 
+static int validate_command(int cmd)
+{
+	if (cmd >= UINIT_CMD_SHUTDOWN && cmd <= UINIT_CMD_SINGLEUSER) return 1;
+	return 0;
+}
+
 static void signal_handler(int sig)
 {
 	int clfd, cmd;
@@ -148,6 +154,7 @@ static void signal_handler(int sig)
 					sz = (size_t)read(clfd, &cmd, sizeof(int));
 					if (sz == NOSIZE) cmd = UINIT_CMD_INVALID;
 					if (sz < sizeof(int)) cmd = UINIT_CMD_INVALID;
+					if (!validate_command(cmd)) cmd = UINIT_CMD_INVALID;
 				}
 			}
 			close(clfd);
