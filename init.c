@@ -18,8 +18,8 @@
 #include <sys/un.h>
 #include <errno.h>
 #include "xstrlcpy.c"
-#ifndef _UINIT_SOCKNAME
-#define _UINIT_SOCKNAME "/dev/initctl"
+#ifndef _UINIT_SOCKPATH
+#define _UINIT_SOCKPATH "/dev/initctl"
 #endif
 
 #ifndef _UINIT_BASEPATH
@@ -27,6 +27,8 @@
 #endif
 
 typedef void (*sighandler_t)(int);
+
+static char *sockpath = _UINIT_SOCKPATH;
 
 static void strtoi(char *s, unsigned x)
 {
@@ -162,7 +164,7 @@ static void signal_handler(int sig)
 	}
 	else if (sig == SIGALRM) {
 		if (ctlfd != -1) return;
-		ctlfd = create_ctrl_socket(_UINIT_SOCKNAME);
+		ctlfd = create_ctrl_socket(sockpath);
 		return;
 	}
 	else if (sig == SIGINT) {
@@ -266,6 +268,9 @@ int main(int argc, char **argv)
 
 	if (getpid() != 1) return 1;
 
+	sockpath = getenv("UINIT_SOCKPATH");
+	if (!sockpath) sockpath = _UINIT_SOCKPATH;
+
 	if (!access(_UINIT_BASEPATH "/altinit", X_OK) && !getenv("_INIT"))
 		execl(_UINIT_BASEPATH "/altinit", "init", (char *)NULL);
 
@@ -301,7 +306,9 @@ int main(int argc, char **argv)
 		signal(SIGINT, signal_handler);
 		signal(SIGIO, signal_handler);
 		signal(SIGCHLD, SIG_DFL);
-		if (_UINIT_SOCKNAME[0] != '@') alarm(10);
+		if (sockpath[0] != '@') {
+			if (!getenv("UINIT_NO_ALARM")) alarm(10);
+		}
 
 		while (1) {
 			if (wait(&x) == -1 && errno == ECHILD) {

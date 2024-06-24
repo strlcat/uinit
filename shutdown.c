@@ -17,8 +17,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include "xstrlcpy.c"
-#ifndef _UINIT_SOCKNAME
-#define _UINIT_SOCKNAME "/dev/initctl"
+#ifndef _UINIT_SOCKPATH
+#define _UINIT_SOCKPATH "/dev/initctl"
 #endif
 
 static int usage(void)
@@ -63,6 +63,7 @@ enum { ACT_NONE = 0, ACT_REBOOT = 1, ACT_HALT = 2, ACT_POWEROFF = 4, ACT_NOSYNC 
 int main(int argc, char **argv)
 {
 	char *progname;
+	char *sockpath = _UINIT_SOCKPATH;
 	int c, actf;
 	int t;
 
@@ -77,8 +78,11 @@ int main(int argc, char **argv)
 		}
 	}
 
+	sockpath = getenv("UINIT_SOCKPATH");
+	if (!sockpath) sockpath = _UINIT_SOCKPATH;
+
 	if (!strcmp(progname, "reboot")) {
-_ckr:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_REBOOT);
+_ckr:		t = send_init_cmd(sockpath, UINIT_CMD_REBOOT);
 		if (t == -1) goto _ckr;
 		if (t == 0) {
 			if (!(actf & ACT_NOSYNC)) sync();
@@ -87,7 +91,7 @@ _ckr:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_REBOOT);
 		return 0;
 	}
 	else if (!strcmp(progname, "halt")) {
-_ckh:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_SHUTDOWN);
+_ckh:		t = send_init_cmd(sockpath, UINIT_CMD_SHUTDOWN);
 		if (t == -1) goto _ckh;
 		if (t == 0) {
 			if (!(actf & ACT_NOSYNC)) sync();
@@ -96,7 +100,7 @@ _ckh:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_SHUTDOWN);
 		return 0;
 	}
 	else if (!strcmp(progname, "poweroff")) {
-_ckp:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_POWEROFF);
+_ckp:		t = send_init_cmd(sockpath, UINIT_CMD_POWEROFF);
 		if (t == -1) goto _ckp;
 		if (t == 0) {
 			if (!(actf & ACT_NOSYNC)) sync();
@@ -105,7 +109,7 @@ _ckp:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_POWEROFF);
 		return 0;
 	}
 	else if (!strcmp(progname, "powerfail")) {
-_ckf:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_POWERFAIL);
+_ckf:		t = send_init_cmd(sockpath, UINIT_CMD_POWERFAIL);
 		if (t == -1) goto _ckf;
 		if (t == 0) {
 			if (!(actf & ACT_NOSYNC)) sync();
@@ -113,7 +117,7 @@ _ckf:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_POWERFAIL);
 		return 0;
 	}
 	else if (!strcmp(progname, "singleuser")) {
-_cks:		t = send_init_cmd(_UINIT_SOCKNAME, UINIT_CMD_SINGLEUSER);
+_cks:		t = send_init_cmd(sockpath, UINIT_CMD_SINGLEUSER);
 		if (t == -1) goto _cks;
 		if (t == 0) {
 			if (!(actf & ACT_NOSYNC)) sync();
