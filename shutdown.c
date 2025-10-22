@@ -16,7 +16,9 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <errno.h>
 #include "xstrlcpy.c"
+#include "xstrlcat.c"
 #ifndef _UINIT_SOCKPATH
 #define _UINIT_SOCKPATH "/dev/initctl"
 #endif
@@ -36,6 +38,29 @@ static int usage(void)
 	return 1;
 }
 
+static char *progname;
+
+static void xerror(const char *s)
+{
+	char t[64];
+	xstrlcpy(t, progname, sizeof(t));
+	xstrlcat(t, ": ", sizeof(t));
+	xstrlcat(t, s, sizeof(t));
+	puts(t);
+	exit(2);
+}
+
+static void do_reboot(int cmd)
+{
+	int r = reboot(cmd);
+	if (r == -1 && errno == EPERM) xerror("must be superuser");
+}
+
+static int checkids(void)
+{
+	return (geteuid() == 0 && getegid() == 0);
+}
+
 static int send_init_cmd(const char *path, int cmd)
 {
 	struct sockaddr_un sun;
@@ -52,7 +77,10 @@ static int send_init_cmd(const char *path, int cmd)
 	else sunl = sizeof(struct sockaddr_un);
 	clfd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (clfd == -1) return -1;
-	if (connect(clfd, (struct sockaddr *)&sun, sunl) == -1) return 0;
+	if (connect(clfd, (struct sockaddr *)&sun, sunl) == -1) {
+		if (errno == EACCES || errno == EPERM) return -2;
+		return 0;
+	}
 	write(clfd, &scmd, sizeof(int));
 	close(clfd);
 	return 1;
@@ -62,7 +90,6 @@ enum { ACT_NONE = 0, ACT_REBOOT = 1, ACT_HALT = 2, ACT_POWEROFF = 4, ACT_NOSYNC 
 
 int main(int argc, char **argv)
 {
-	char *progname;
 	char *sockpath = _UINIT_SOCKPATH;
 	int c, actf;
 	int t;
@@ -84,34 +111,42 @@ int main(int argc, char **argv)
 	if (!strcmp(progname, "reboot")) {
 _ckr:		t = send_init_cmd(sockpath, UINIT_CMD_REBOOT);
 		if (t == -1) goto _ckr;
-		if (t == 0) {
+		else if (t == -2) xerror("must be superuser");
+		else if (t == 0) {
+			if (!checkids()) xerror("must be superuser");
 			if (!(actf & ACT_NOSYNC)) sync();
-			reboot(RB_AUTOBOOT);
+			do_reboot(RB_AUTOBOOT);
 		}
 		return 0;
 	}
 	else if (!strcmp(progname, "halt")) {
 _ckh:		t = send_init_cmd(sockpath, UINIT_CMD_SHUTDOWN);
 		if (t == -1) goto _ckh;
-		if (t == 0) {
+		else if (t == -2) xerror("must be superuser");
+		else if (t == 0) {
+			if (!checkids()) xerror("must be superuser");
 			if (!(actf & ACT_NOSYNC)) sync();
-			reboot(RB_HALT_SYSTEM);
+			do_reboot(RB_HALT_SYSTEM);
 		}
 		return 0;
 	}
 	else if (!strcmp(progname, "poweroff")) {
 _ckp:		t = send_init_cmd(sockpath, UINIT_CMD_POWEROFF);
 		if (t == -1) goto _ckp;
-		if (t == 0) {
+		else if (t == -2) xerror("must be superuser");
+		else if (t == 0) {
+			if (!checkids()) xerror("must be superuser");
 			if (!(actf & ACT_NOSYNC)) sync();
-			reboot(RB_POWER_OFF);
+			do_reboot(RB_POWER_OFF);
 		}
 		return 0;
 	}
 	else if (!strcmp(progname, "powerfail")) {
 _ckf:		t = send_init_cmd(sockpath, UINIT_CMD_POWERFAIL);
 		if (t == -1) goto _ckf;
-		if (t == 0) {
+		else if (t == -2) xerror("must be superuser");
+		else if (t == 0) {
+			if (!checkids()) xerror("must be superuser");
 			if (!(actf & ACT_NOSYNC)) sync();
 		}
 		return 0;
@@ -119,7 +154,9 @@ _ckf:		t = send_init_cmd(sockpath, UINIT_CMD_POWERFAIL);
 	else if (!strcmp(progname, "singleuser")) {
 _cks:		t = send_init_cmd(sockpath, UINIT_CMD_SINGLEUSER);
 		if (t == -1) goto _cks;
-		if (t == 0) {
+		else if (t == -2) xerror("must be superuser");
+		else if (t == 0) {
+			if (!checkids()) xerror("must be superuser");
 			if (!(actf & ACT_NOSYNC)) sync();
 		}
 		return 0;
@@ -140,9 +177,9 @@ _cks:		t = send_init_cmd(sockpath, UINIT_CMD_SINGLEUSER);
 
 	if (!(actf & ACT_NOSYNC)) sync();
 
-	if (actf & ACT_REBOOT) reboot(RB_AUTOBOOT);
-	else if (actf & ACT_HALT) reboot(RB_HALT_SYSTEM);
-	else if (actf & ACT_POWEROFF) reboot(RB_POWER_OFF);
+	if (actf & ACT_REBOOT) do_reboot(RB_AUTOBOOT);
+	else if (actf & ACT_HALT) do_reboot(RB_HALT_SYSTEM);
+	else if (actf & ACT_POWEROFF) do_reboot(RB_POWER_OFF);
 	else return usage();
 
 	return 0;
