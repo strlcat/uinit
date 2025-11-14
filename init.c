@@ -130,18 +130,20 @@ static int validate_command(int cmd)
 
 static void signal_handler(int sig)
 {
-	int clfd, cmd;
+	int cmd;
 	size_t sz;
 	sigset_t set;
 
 	cmd = UINIT_CMD_INVALID;
 
 	if (sig == SIGIO) {
+		int clfd, rsp;
 		struct ucred cr;
 		socklen_t crl;
 
 		if (ctlfd == -1) return;
 
+		rsp = UINIT_RSP_INVALID;
 		clfd = accept(ctlfd, NULL, 0);
 		if (clfd != -1) {
 			cr.uid = NOUID;
@@ -150,6 +152,7 @@ static void signal_handler(int sig)
 			crl = sizeof(struct ucred);
 			if (getsockopt(clfd, SOL_SOCKET, SO_PEERCRED, &cr, &crl) == -1) {
 				cmd = UINIT_CMD_INVALID;
+				rsp = UINIT_RSP_DENIED;
 			}
 			else {
 				if (cr.uid == 0 && cr.gid == 0 && cr.pid > 1) {
@@ -157,8 +160,13 @@ static void signal_handler(int sig)
 					if (sz == NOSIZE) cmd = UINIT_CMD_INVALID;
 					if (sz < sizeof(int)) cmd = UINIT_CMD_INVALID;
 					if (!validate_command(cmd)) cmd = UINIT_CMD_INVALID;
+
+					if (cmd == UINIT_CMD_INVALID) rsp = UINIT_RSP_INVALID;
+					else rsp = UINIT_RSP_OK;
 				}
 			}
+
+			write(clfd, &rsp, sizeof(int));
 			close(clfd);
 		}
 	}
