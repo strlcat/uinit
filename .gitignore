@@ -5,6 +5,7 @@ _*
 *.diff
 *.asc
 *.txt
+*.out
 tags
 init
 shutdown
