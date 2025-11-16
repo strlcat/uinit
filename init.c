@@ -71,6 +71,14 @@ static unsigned atoui(const char *s)
 	return x;
 }
 
+static void panic(int fd, const char *s)
+{
+	write(fd, "init: ", CSTR_SZ("init: "));
+	write(fd, s, strlen(s));
+	write(fd, "\n", CSTR_SZ("\n"));
+	pause();
+}
+
 static int setfd_cloexec(int fd)
 {
 	int x;
@@ -285,8 +293,7 @@ int main(int argc, char **argv)
 	s = getenv("CONSOLE");
 	x = reopen_console(s ? s : "/dev/console");
 	if (x != 5) {
-		if (x != -1) write(x, "Unable to open initial console", (sizeof("Unable to open initial console")-1));
-		pause();
+		if (x != -1) panic(x, "Unable to open initial console");
 	}
 
 	s = getenv("UINIT_SOCKFD");
