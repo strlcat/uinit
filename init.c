@@ -315,11 +315,13 @@ int main(int argc, char **argv)
 		sigdelset(&set, SIGALRM);
 		sigdelset(&set, SIGINT);
 		sigdelset(&set, SIGIO);
+		sigdelset(&set, SIGHUP);
 		sigdelset(&set, SIGCHLD);
 		sigprocmask(SIG_BLOCK, &set, NULL);
 		signal(SIGALRM, signal_handler);
 		signal(SIGINT, signal_handler);
 		signal(SIGIO, signal_handler);
+		signal(SIGHUP, signal_handler);
 		signal(SIGCHLD, SIG_DFL);
 		if (sockpath[0] != '@') {
 			if (!getenv("UINIT_NO_ALARM")) alarm(10);
